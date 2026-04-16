@@ -15,7 +15,7 @@ st.set_page_config(layout="wide")
 # LOAD MODELS
 # -----------------------------
 # rf_model = pickle.load(open("rf_model.pkl","rb"))
-lstm_model = load_model("lstm_model.keras")
+lstm_model = load_model("lstm_model.keras", compile= False)
 
 features = [
 "sensor_2","sensor_3","sensor_4",
