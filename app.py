@@ -95,34 +95,71 @@ else:
 # -----------------------------
 # PREDICTION
 # -----------------------------
-if st.button("🚀 Predict RUL"):
+# if st.button("🚀 Predict RUL"):
 
-    # ---------------- RF MODEL ----------------
-    # if model_choice == "Random Forest":
-    #     pred = rf_model.predict(input_data[features])
-    #     rul_pred = int(pred[0])
+#     # ---------------- RF MODEL ----------------
+#     # if model_choice == "Random Forest":
+#     #     pred = rf_model.predict(input_data[features])
+#     #     rul_pred = int(pred[0])
 
-    # ---------------- LSTM MODEL ----------------
-    # else:
-        # seq_length = 30
+#     # ---------------- LSTM MODEL ----------------
+#     # else:
+#         # seq_length = 30
 
-        if uploaded_file is not None:
-            # use last 30 cycles
-            seq = input_data[features].values[-SEQ_LENGTH:]
+#         if uploaded_file is not None:
+#             # use last 30 cycles
+#             seq = input_data[features].values[-SEQ_LENGTH:]
 
-            # pad if needed
-            if len(seq) < SEQ_LENGTH:
-                pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
-                seq = np.vstack([pad, seq])
+#             # pad if needed
+#             if len(seq) < SEQ_LENGTH:
+#                 pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+#                 seq = np.vstack([pad, seq])
 
-        else:
-            # fallback (demo only)
-            seq = np.repeat(input_data[features].values, SEQ_LENGTH, axis=0)
+#         else:
+#             # fallback (demo only)
+#             seq = np.repeat(input_data[features].values, SEQ_LENGTH, axis=0)
 
+#         seq = seq.reshape(1, SEQ_LENGTH, len(features))
+
+#         pred = lstm_model.predict(seq)
+#         rul_pred = max (0, int(pred[0][0]))
+
+    if st.button("🚀 Predict RUL"):
+
+        # ---------------- LSTM MODEL ----------------
+
+        # Ensure correct columns exist
+        missing_cols = [col for col in features if col not in input_data.columns]
+        if len(missing_cols) > 0:
+            st.error(f"Missing columns: {missing_cols}")
+            st.stop()
+
+        # Keep only required features
+        input_data = input_data[features]
+
+        # Convert to numeric safely
+        input_data = input_data.apply(pd.to_numeric, errors='coerce')
+
+        # Fill missing values
+        input_data = input_data.fillna(0)
+
+        # Convert to numpy
+        seq = input_data.values
+
+        # Take last 30 cycles
+        seq = seq[-SEQ_LENGTH:]
+
+        # Pad if needed
+        if len(seq) < SEQ_LENGTH:
+            pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+            seq = np.vstack([pad, seq])
+
+        # Reshape for LSTM
         seq = seq.reshape(1, SEQ_LENGTH, len(features))
 
+        # Predict
         pred = lstm_model.predict(seq)
-        rul_pred = max (0, int(pred[0][0]))
+        rul_pred = max(0, int(pred[0][0]))
 
     # ---------------- OUTPUT ----------------
     # col1, col2, col3 = st.columns(3)
