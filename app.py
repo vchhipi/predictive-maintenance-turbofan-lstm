@@ -145,7 +145,8 @@ else:
 
         # Convert to numpy
         seq = input_data.values
-
+        # 🔥 NORMALIZE DATA (CRITICAL FIX)
+        seq = (seq - np.mean(seq)) / (np.std(seq) + 1e-8)
         # Take last 30 cycles
         seq = seq[-SEQ_LENGTH:]
 
@@ -158,6 +159,10 @@ else:
         seq = seq.reshape(1, SEQ_LENGTH, len(features))
 
         # Predict
+        # st.write("Shape:", seq.shape)
+        # st.write("Dtype:", seq.dtype)
+        # st.write("Min:", np.min(seq))
+        # st.write("Max:", np.max(seq))
         pred = lstm_model.predict(seq)
         rul_pred = max(0, int(pred[0][0]))
 
