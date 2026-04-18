@@ -146,7 +146,7 @@ else:
         # Convert to numpy
         seq = input_data.values
         # 🔥 NORMALIZE DATA (CRITICAL FIX)
-        seq = (seq - np.mean(seq)) / (np.std(seq) + 1e-8)
+        # seq = (seq - np.mean(seq)) / (np.std(seq) + 1e-8)
         # Take last 30 cycles
         seq = seq[-SEQ_LENGTH:]
 
