@@ -1,46 +1,39 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-# from tensorflow.keras.models import load_model
+import pickle
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 
-SEQ_LENGTH = 30
-N_FEATURES = 22
+# -----------------------------
+# CONFIG
+# -----------------------------
+st.set_page_config(layout="wide")
 
+SEQ_LENGTH = 30
+
+# -----------------------------
+# LOAD SCALER
+# -----------------------------
+scaler = pickle.load(open("scaler.pkl", "rb"))
+
+# -----------------------------
+# LOAD MODEL (MANUAL ARCHITECTURE)
+# -----------------------------
 lstm_model = Sequential([
-    LSTM(64, return_sequences=True, input_shape=(SEQ_LENGTH, N_FEATURES)),
+    LSTM(64, return_sequences=True, input_shape=(SEQ_LENGTH, 22)),
     Dropout(0.2),
     LSTM(32),
     Dropout(0.2),
     Dense(1)
 ])
 
-# Load weights
 lstm_model.load_weights("model.weights.h5")
-# -----------------------------
-# CONFIG
-# -----------------------------
-st.set_page_config(layout="wide")
 
 # -----------------------------
-# LOAD MODEL
+# FEATURES
 # -----------------------------
-# lstm_model = load_model("lstm_fixed.h5" , compile=False)
-
-# Model expects 22 features (cycle + 21 sensors)
-features =  ["cycle"]+[f"sensor_{i}" for i in range(1, 22)]
-SEQ_LENGTH = 30
-
-# -----------------------------
-# CSS
-# -----------------------------
-st.markdown("""
-<style>
-[data-testid="stMetricValue"] {font-size: 26px !important;}
-[data-testid="stMetricLabel"] {font-size: 14px !important;}
-</style>
-""", unsafe_allow_html=True)
+features = ["cycle"] + [f"sensor_{i}" for i in range(1, 22)]
 
 # -----------------------------
 # HELPERS
@@ -65,12 +58,12 @@ def maintenance_action(rul):
 # HEADER
 # -----------------------------
 st.title("✈️ Turbofan Engine Health Monitor")
-st.markdown("### Predictive Maintenance Dashboard (ML Powered)")
+st.markdown("### Predictive Maintenance Dashboard (LSTM Model)")
 
 # -----------------------------
 # INPUT
 # -----------------------------
-st.sidebar.header("Input Engine Data")
+st.sidebar.header("Upload Data")
 uploaded_file = st.sidebar.file_uploader("Upload FD001 CSV")
 
 input_data = None
@@ -82,20 +75,21 @@ if uploaded_file is not None:
     engine_ids = df['engine_id'].unique()
     selected_engine = st.sidebar.selectbox("Select Engine", engine_ids)
 
+    # Filter engine
     engine_data = df[df['engine_id'] == selected_engine]
 
-    # Cycle selection (CRITICAL)
-    # cycle_value = st.sidebar.slider(
-    #     "Select Cycle",
-    #     int(engine_data["cycle"].min()),
-    #     int(engine_data["cycle"].max()),
-    #     int(engine_data["cycle"].max())
-    # )
+    # Cycle selection (IMPORTANT)
+    cycle_value = st.sidebar.slider(
+        "Select Cycle",
+        int(engine_data["cycle"].min()),
+        int(engine_data["cycle"].max()),
+        int(engine_data["cycle"].max())
+    )
 
-    # # Use data till selected cycle
-    # input_data = engine_data[engine_data["cycle"] <= cycle_value]
+    # Use data till selected cycle
+    input_data = engine_data[engine_data["cycle"] <= cycle_value]
 
-    input_data = engine_data
+else:
     st.warning("Upload CSV file")
 
 # -----------------------------
@@ -107,34 +101,50 @@ if st.button("🚀 Predict RUL"):
         st.error("Upload CSV first")
         st.stop()
 
+    # Ensure required columns
     missing_cols = [col for col in features if col not in input_data.columns]
     if missing_cols:
         st.error(f"Missing columns: {missing_cols}")
         st.stop()
+
+    # Clean data
+    input_data = input_data[features]
+    input_data = input_data.apply(pd.to_numeric, errors='coerce')
+    input_data = input_data.fillna(0)
+
+    # -----------------------------
+    # 🔥 SCALING (CRITICAL FIX)
+    # -----------------------------
+    seq = input_data.values
+
+    # reshape to 2D
+    seq_2d = seq.reshape(-1, seq.shape[-1])
+
+    # scale
+    seq_2d = scaler.transform(seq_2d)
+
+    # reshape back
+    seq = seq_2d.reshape(seq.shape)
+
+    # -----------------------------
+    # SEQUENCE
+    # -----------------------------
+    seq = seq[-SEQ_LENGTH:]
+
+    if len(seq) < SEQ_LENGTH:
+        pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+        seq = np.vstack([pad, seq])
+
+    seq = seq.reshape(1, SEQ_LENGTH, len(features))
+
+    # -----------------------------
+    # PREDICT
+    # -----------------------------
     try:
-        # Select features
-        input_data = input_data[features]
-
-        # Clean data
-        input_data = input_data.apply(pd.to_numeric, errors='coerce')
-        input_data = input_data.fillna(0)
-
-        # Create sequence
-        seq = input_data.values
-        seq = seq[-SEQ_LENGTH:]
-
-        if len(seq) < SEQ_LENGTH:
-            pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
-            seq = np.vstack([pad, seq])
-
-        seq = np.nan_to_num(seq)
-        seq = seq.reshape(1, SEQ_LENGTH, len(features))
-
-        # Predict
         pred = lstm_model.predict(seq)
         rul_pred = max(0, int(pred[0][0]))
 
-        # Output
+        # OUTPUT
         col1, col2, col3 = st.columns(3)
         col1.metric("Remaining Useful Life", f"{rul_pred} cycles")
         col2.metric("Engine Stage", get_life_stage(rul_pred))
@@ -160,6 +170,196 @@ if st.button("🚀 Predict RUL"):
 # INFO
 # -----------------------------
 st.info("Model: LSTM | Dataset: NASA C-MAPSS FD001")
+# import streamlit as st
+# import pandas as pd
+# import numpy as np
+# # from tensorflow.keras.models import load_model
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import LSTM, Dense, Dropout
+# import pickle
+
+# scaler = pickle.load(open("scaler.pkl", "rb"))
+# SEQ_LENGTH = 30
+# N_FEATURES = 22
+
+# lstm_model = Sequential([
+#     LSTM(64, return_sequences=True, input_shape=(SEQ_LENGTH, N_FEATURES)),
+#     Dropout(0.2),
+#     LSTM(32),
+#     Dropout(0.2),
+#     Dense(1)
+# ])
+
+# # Load weights
+# lstm_model.load_weights("model.weights.h5")
+# # -----------------------------
+# # CONFIG
+# # -----------------------------
+# st.set_page_config(layout="wide")
+
+# # -----------------------------
+# # LOAD MODEL
+# # -----------------------------
+# # lstm_model = load_model("lstm_fixed.h5" , compile=False)
+
+# # Model expects 22 features (cycle + 21 sensors)
+# features =  ["cycle"]+[f"sensor_{i}" for i in range(1, 22)]
+# SEQ_LENGTH = 30
+
+# # -----------------------------
+# # CSS
+# # -----------------------------
+# st.markdown("""
+# <style>
+# [data-testid="stMetricValue"] {font-size: 26px !important;}
+# [data-testid="stMetricLabel"] {font-size: 14px !important;}
+# </style>
+# """, unsafe_allow_html=True)
+
+# # -----------------------------
+# # HELPERS
+# # -----------------------------
+# def get_life_stage(rul):
+#     if rul > 80:
+#         return "🟢 Early Life"
+#     elif rul > 40:
+#         return "🟡 Mid Life"
+#     else:
+#         return "🔴 Near Failure"
+
+# def maintenance_action(rul):
+#     if rul > 80:
+#         return "Continue Operation"
+#     elif rul > 40:
+#         return "Schedule Inspection"
+#     else:
+#         return "Perform Maintenance Immediately"
+
+# # -----------------------------
+# # HEADER
+# # -----------------------------
+# st.title("✈️ Turbofan Engine Health Monitor")
+# st.markdown("### Predictive Maintenance Dashboard (ML Powered)")
+
+# # -----------------------------
+# # INPUT
+# # -----------------------------
+# st.sidebar.header("Input Engine Data")
+# uploaded_file = st.sidebar.file_uploader("Upload FD001 CSV")
+
+# input_data = None
+
+# if uploaded_file is not None:
+#     df = pd.read_csv(uploaded_file)
+
+#     # Engine selection
+#     engine_ids = df['engine_id'].unique()
+#     selected_engine = st.sidebar.selectbox("Select Engine", engine_ids)
+
+#     engine_data = df[df['engine_id'] == selected_engine]
+#     input_data = engine_data.copy()
+
+#     # Cycle selection (CRITICAL)
+#     # cycle_value = st.sidebar.slider(
+#     #     "Select Cycle",
+#     #     int(engine_data["cycle"].min()),
+#     #     int(engine_data["cycle"].max()),
+#     #     int(engine_data["cycle"].max())
+#     # )
+
+#     # # Use data till selected cycle
+#     # input_data = engine_data[engine_data["cycle"] <= cycle_value]
+
+#     input_data = engine_data
+#     st.warning("Upload CSV file")
+
+# # -----------------------------
+# # PREDICTION
+# # -----------------------------
+# if st.button("🚀 Predict RUL"):
+
+#     # DEBUG
+#     st.write("Selected Engine:", selected_engine)
+#     st.write("Rows after filtering:", input_data.shape)
+#     st.write("Head:", input_data.head())
+#     st.write("Tail:", input_data.tail())
+
+#     # Preprocess
+#     input_data = input_data[features]
+#     input_data = input_data.apply(pd.to_numeric, errors='coerce')
+#     input_data = input_data.fillna(0)
+
+#     seq = input_data.values
+#     seq_2d = seq.reshape(-1, seq.shape[-1])
+
+#     # 🔥 STEP 2: scale using saved scaler
+#     seq_2d = scaler.transform(seq_2d)
+
+#     # 🔥 STEP 3: reshape back to 3D
+#     seq = seq_2d.reshape(seq.shape)
+#     seq = seq[-SEQ_LENGTH:]
+
+#     # DEBUG
+#     st.write("Sequence shape:", seq.shape)
+#     st.write("Sequence sample:", seq[0][:5])
+
+#     if input_data is None:
+#         st.error("Upload CSV first")
+#         st.stop()
+
+#     missing_cols = [col for col in features if col not in input_data.columns]
+#     if missing_cols:
+#         st.error(f"Missing columns: {missing_cols}")
+#         st.stop()
+#     try:
+#         # Select features
+#         input_data = input_data[features]
+
+#         # Clean data
+#         input_data = input_data.apply(pd.to_numeric, errors='coerce')
+#         input_data = input_data.fillna(0)
+
+#         # Create sequence
+#         seq = input_data.values
+#         seq = seq[-SEQ_LENGTH:]
+
+#         if len(seq) < SEQ_LENGTH:
+#             pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+#             seq = np.vstack([pad, seq])
+
+#         seq = np.nan_to_num(seq)
+#         seq = seq.reshape(1, SEQ_LENGTH, len(features))
+
+#         # Predict
+#         pred = lstm_model.predict(seq)
+#         rul_pred = max(0, int(pred[0][0]))
+
+#         # Output
+#         col1, col2, col3 = st.columns(3)
+#         col1.metric("Remaining Useful Life", f"{rul_pred} cycles")
+#         col2.metric("Engine Stage", get_life_stage(rul_pred))
+#         col3.metric("Recommended Action", maintenance_action(rul_pred))
+
+#         # Alerts
+#         if rul_pred > 80:
+#             st.success("Engine is healthy.")
+#         elif rul_pred > 40:
+#             st.warning("Inspection recommended.")
+#         else:
+#             st.error("⚠️ Critical condition!")
+
+#         # Progress bar
+#         progress_value = max(0, min(rul_pred / 125, 1.0))
+#         st.subheader("Engine Health Level")
+#         st.progress(progress_value)
+
+#     except Exception as e:
+#         st.error(f"Prediction Error: {e}")
+
+# # -----------------------------
+# # INFO
+# # -----------------------------
+# st.info("Model: LSTM | Dataset: NASA C-MAPSS FD001")
 
 
 
