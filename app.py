@@ -11,7 +11,7 @@ st.set_page_config(layout="wide")
 # -----------------------------
 # LOAD MODEL
 # -----------------------------
-lstm_model = load_model("lstm_model.h5" , compile=False, safe_mode = False)
+lstm_model = load_model("lstm_fixed.h5" , compile=False)
 
 # Model expects 22 features (cycle + 21 sensors)
 features =  [f"sensor_{i}" for i in range(1, 22)]
