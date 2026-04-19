@@ -29,7 +29,7 @@ st.set_page_config(layout="wide")
 # lstm_model = load_model("lstm_fixed.h5" , compile=False)
 
 # Model expects 22 features (cycle + 21 sensors)
-features =  [f"sensor_{i}" for i in range(1, 22)]
+features =  ["cycle"]+[f"sensor_{i}" for i in range(1, 22)]
 SEQ_LENGTH = 30
 
 # -----------------------------
