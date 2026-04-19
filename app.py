@@ -1,8 +1,17 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from tensorflow.keras.models import load_model
+# from tensorflow.keras.models import load_model
+from tensorflow.keras.models import model_from_json
 
+# Load architecture
+with open("model.json", "r") as json_file:
+    loaded_model = model_from_json(json_file.read())
+
+# Load weights
+loaded_model.load_weights("model.weights.h5")
+
+lstm_model = loaded_model
 # -----------------------------
 # CONFIG
 # -----------------------------
@@ -11,7 +20,7 @@ st.set_page_config(layout="wide")
 # -----------------------------
 # LOAD MODEL
 # -----------------------------
-lstm_model = load_model("lstm_fixed.h5" , compile=False)
+# lstm_model = load_model("lstm_fixed.h5" , compile=False)
 
 # Model expects 22 features (cycle + 21 sensors)
 features =  [f"sensor_{i}" for i in range(1, 22)]
