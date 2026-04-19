@@ -2,16 +2,22 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 # from tensorflow.keras.models import load_model
-from tensorflow.keras.models import model_from_json
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 
-# Load architecture
-with open("model.json", "r") as json_file:
-    loaded_model = model_from_json(json_file.read())
+SEQ_LENGTH = 30
+N_FEATURES = 22
+
+lstm_model = Sequential([
+    LSTM(64, return_sequences=True, input_shape=(SEQ_LENGTH, N_FEATURES)),
+    Dropout(0.2),
+    LSTM(32),
+    Dropout(0.2),
+    Dense(1)
+])
 
 # Load weights
-loaded_model.load_weights("model.weights.h5")
-
-lstm_model = loaded_model
+lstm_model.load_weights("model.weights.h5")
 # -----------------------------
 # CONFIG
 # -----------------------------
