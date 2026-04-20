@@ -86,15 +86,20 @@ if uploaded_file is not None:
     engine_data = df[df['engine_id'] == selected_engine]
 
     # Cycle selection
-    cycle_value = st.sidebar.slider(
-        "Select Cycle",
-        int(engine_data["cycle"].min()),
-        int(engine_data["cycle"].max()),
-        int(engine_data["cycle"].max())
-    )
+    # cycle_value = st.sidebar.slider(
+    #     "Select Cycle",
+    #     int(engine_data["cycle"].min()),
+    #     int(engine_data["cycle"].max()),
+    #     int(engine_data["cycle"].max())
+    # )
 
-    # Use data till selected cycle
-    input_data = engine_data[engine_data["cycle"] <= cycle_value]
+    # # Use data till selected cycle
+    # input_data = engine_data[engine_data["cycle"] <= cycle_value]
+    # Always use full data (latest condition)
+    input_data = engine_data
+
+    # Optional: show current cycle
+    st.write("Using latest cycle:", int(engine_data["cycle"].max()))
 
 else:
     st.warning("Upload CSV file")
