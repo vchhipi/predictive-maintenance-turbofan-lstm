@@ -96,7 +96,8 @@ if uploaded_file is not None:
     # # Use data till selected cycle
     # input_data = engine_data[engine_data["cycle"] <= cycle_value]
     # Always use full data (latest condition)
-    input_data = engine_data
+    # input_data = engine_data
+    input_data = engine_data.iloc[:50]   # or any mid point
 
     # Optional: show current cycle
     st.write("Using latest cycle:", int(engine_data["cycle"].max()))
