@@ -126,15 +126,31 @@ if st.button("🚀 Predict RUL"):
     # # reshape back
     # seq = seq_2d.reshape(seq.shape)
     # STEP 1: take last 30 FIRST
+    # seq = input_data.values[-SEQ_LENGTH:]
+
+    # # STEP 2: reshape to 2D
+    # seq_2d = seq.reshape(-1, seq.shape[-1])
+
+    # # STEP 3: scale
+    # seq_2d = scaler.transform(seq_2d)
+
+    # # STEP 4: reshape back
+    # seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
+    # STEP 1: take last 30 FIRST
     seq = input_data.values[-SEQ_LENGTH:]
 
-    # STEP 2: reshape to 2D
+    # STEP 2: pad BEFORE scaling (IMPORTANT)
+    if len(seq) < SEQ_LENGTH:
+        pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+        seq = np.vstack([pad, seq])
+
+    # STEP 3: reshape to 2D
     seq_2d = seq.reshape(-1, seq.shape[-1])
 
-    # STEP 3: scale
+    # STEP 4: scale
     seq_2d = scaler.transform(seq_2d)
 
-    # STEP 4: reshape back
+    # STEP 5: reshape to 3D for LSTM
     seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
     # -----------------------------
     # SEQUENCE
