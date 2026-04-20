@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import Input
 
 # -----------------------------
 # CONFIG
@@ -19,8 +20,16 @@ scaler = pickle.load(open("scaler.pkl", "rb"))
 # -----------------------------
 # LOAD MODEL (MATCH TRAINING)
 # -----------------------------
+# lstm_model = Sequential([
+#     LSTM(64, return_sequences=True, input_shape=(SEQ_LENGTH, 22)),
+#     Dropout(0.2),
+#     LSTM(32),
+#     Dropout(0.2),
+#     Dense(1)
+# ])
 lstm_model = Sequential([
-    LSTM(64, return_sequences=True, input_shape=(SEQ_LENGTH, 22)),
+    Input(shape=(SEQ_LENGTH, 22)),   # ✅ FIX
+    LSTM(64, return_sequences=True),
     Dropout(0.2),
     LSTM(32),
     Dropout(0.2),
