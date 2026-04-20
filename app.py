@@ -9,7 +9,6 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout
 # CONFIG
 # -----------------------------
 st.set_page_config(layout="wide")
-
 SEQ_LENGTH = 30
 
 # -----------------------------
@@ -18,7 +17,7 @@ SEQ_LENGTH = 30
 scaler = pickle.load(open("scaler.pkl", "rb"))
 
 # -----------------------------
-# LOAD MODEL (MANUAL ARCHITECTURE)
+# LOAD MODEL (MATCH TRAINING)
 # -----------------------------
 lstm_model = Sequential([
     LSTM(64, return_sequences=True, input_shape=(SEQ_LENGTH, 22)),
@@ -27,7 +26,6 @@ lstm_model = Sequential([
     Dropout(0.2),
     Dense(1)
 ])
-
 lstm_model.load_weights("model.weights.h5")
 
 # -----------------------------
@@ -78,7 +76,7 @@ if uploaded_file is not None:
     # Filter engine
     engine_data = df[df['engine_id'] == selected_engine]
 
-    # Cycle selection (IMPORTANT)
+    # Cycle selection
     cycle_value = st.sidebar.slider(
         "Select Cycle",
         int(engine_data["cycle"].min()),
@@ -101,67 +99,40 @@ if st.button("🚀 Predict RUL"):
         st.error("Upload CSV first")
         st.stop()
 
-    # Ensure required columns
+    # Check columns
     missing_cols = [col for col in features if col not in input_data.columns]
     if missing_cols:
         st.error(f"Missing columns: {missing_cols}")
         st.stop()
 
-    # Clean data
+    # -----------------------------
+    # PREPARE INPUT
+    # -----------------------------
     input_data = input_data[features]
     input_data = input_data.apply(pd.to_numeric, errors='coerce')
     input_data = input_data.fillna(0)
 
     # -----------------------------
-    # 🔥 SCALING (CRITICAL FIX)
+    # CREATE SEQUENCE
     # -----------------------------
-    # seq = input_data.values
+    seq = input_data.values
 
-    # # reshape to 2D
-    # seq_2d = seq.reshape(-1, seq.shape[-1])
-
-    # # scale
-    # seq_2d = scaler.transform(seq_2d)
-
-    # # reshape back
-    # seq = seq_2d.reshape(seq.shape)
-    # STEP 1: take last 30 FIRST
-    # seq = input_data.values[-SEQ_LENGTH:]
-
-    # # STEP 2: reshape to 2D
-    # seq_2d = seq.reshape(-1, seq.shape[-1])
-
-    # # STEP 3: scale
-    # seq_2d = scaler.transform(seq_2d)
-
-    # # STEP 4: reshape back
-    # seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
-    # STEP 1: take last 30 FIRST
-    seq = input_data.values[-SEQ_LENGTH:]
-
-    # STEP 2: pad BEFORE scaling (IMPORTANT)
-    if len(seq) < SEQ_LENGTH:
+    if len(seq) >= SEQ_LENGTH:
+        seq = seq[-SEQ_LENGTH:]
+    else:
         pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
-        seq = np.vstack([pad, seq])
+        seq = np.vstack([pad, seq])   # 2D safe
 
-    # STEP 3: reshape to 2D
+    # -----------------------------
+    # SCALE (MATCH TRAINING)
+    # -----------------------------
     seq_2d = seq.reshape(-1, seq.shape[-1])
-
-    # STEP 4: scale
     seq_2d = scaler.transform(seq_2d)
 
-    # STEP 5: reshape to 3D for LSTM
+    # -----------------------------
+    # FINAL SHAPE
+    # -----------------------------
     seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
-    # -----------------------------
-    # SEQUENCE
-    # -----------------------------
-    # seq = seq[-SEQ_LENGTH:]
-
-    if len(seq) < SEQ_LENGTH:
-        pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
-        seq = np.vstack([pad, seq])
-
-    seq = seq.reshape(1, SEQ_LENGTH, len(features))
 
     # -----------------------------
     # PREDICT
@@ -196,6 +167,237 @@ if st.button("🚀 Predict RUL"):
 # INFO
 # -----------------------------
 st.info("Model: LSTM | Dataset: NASA C-MAPSS FD001")
+
+
+
+
+
+# import streamlit as st
+# import pandas as pd
+# import numpy as np
+# import pickle
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import LSTM, Dense, Dropout
+
+# # -----------------------------
+# # CONFIG
+# # -----------------------------
+# st.set_page_config(layout="wide")
+
+# SEQ_LENGTH = 30
+
+# # -----------------------------
+# # LOAD SCALER
+# # -----------------------------
+# scaler = pickle.load(open("scaler.pkl", "rb"))
+
+# # -----------------------------
+# # LOAD MODEL (MANUAL ARCHITECTURE)
+# # -----------------------------
+# lstm_model = Sequential([
+#     LSTM(64, return_sequences=True, input_shape=(SEQ_LENGTH, 22)),
+#     Dropout(0.2),
+#     LSTM(32),
+#     Dropout(0.2),
+#     Dense(1)
+# ])
+
+# lstm_model.load_weights("model.weights.h5")
+
+# # -----------------------------
+# # FEATURES
+# # -----------------------------
+# features = ["cycle"] + [f"sensor_{i}" for i in range(1, 22)]
+
+# # -----------------------------
+# # HELPERS
+# # -----------------------------
+# def get_life_stage(rul):
+#     if rul > 80:
+#         return "🟢 Early Life"
+#     elif rul > 40:
+#         return "🟡 Mid Life"
+#     else:
+#         return "🔴 Near Failure"
+
+# def maintenance_action(rul):
+#     if rul > 80:
+#         return "Continue Operation"
+#     elif rul > 40:
+#         return "Schedule Inspection"
+#     else:
+#         return "Perform Maintenance Immediately"
+
+# # -----------------------------
+# # HEADER
+# # -----------------------------
+# st.title("✈️ Turbofan Engine Health Monitor")
+# st.markdown("### Predictive Maintenance Dashboard (LSTM Model)")
+
+# # -----------------------------
+# # INPUT
+# # -----------------------------
+# st.sidebar.header("Upload Data")
+# uploaded_file = st.sidebar.file_uploader("Upload FD001 CSV")
+
+# input_data = None
+
+# if uploaded_file is not None:
+#     df = pd.read_csv(uploaded_file)
+
+#     # Engine selection
+#     engine_ids = df['engine_id'].unique()
+#     selected_engine = st.sidebar.selectbox("Select Engine", engine_ids)
+
+#     # Filter engine
+#     engine_data = df[df['engine_id'] == selected_engine]
+
+#     # Cycle selection (IMPORTANT)
+#     cycle_value = st.sidebar.slider(
+#         "Select Cycle",
+#         int(engine_data["cycle"].min()),
+#         int(engine_data["cycle"].max()),
+#         int(engine_data["cycle"].max())
+#     )
+
+#     # Use data till selected cycle
+#     input_data = engine_data[engine_data["cycle"] <= cycle_value]
+
+# else:
+#     st.warning("Upload CSV file")
+
+# # -----------------------------
+# # PREDICTION
+# # -----------------------------
+# if st.button("🚀 Predict RUL"):
+
+#     if input_data is None:
+#         st.error("Upload CSV first")
+#         st.stop()
+
+#     # Ensure required columns
+#     missing_cols = [col for col in features if col not in input_data.columns]
+#     if missing_cols:
+#         st.error(f"Missing columns: {missing_cols}")
+#         st.stop()
+
+#     # Clean data
+#     # -----------------------------
+#     # PREPARE INPUT
+#     # -----------------------------
+#     input_data = input_data[features]
+#     input_data = input_data.apply(pd.to_numeric, errors='coerce')
+#     input_data = input_data.fillna(0)
+
+#     # -----------------------------
+#     # STEP 1: take last 30 cycles
+#     # -----------------------------
+#     seq = input_data.values
+
+#     if len(seq) >= SEQ_LENGTH:
+#         seq = seq[-SEQ_LENGTH:]
+#     else:
+#         pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+#         seq = np.vstack([pad, seq])   # ✅ both 2D → safe
+
+#     # -----------------------------
+#     # STEP 2: SCALE (2D only)
+#     # -----------------------------
+#     seq_2d = seq.reshape(-1, seq.shape[-1])
+#     seq_2d = scaler.transform(seq_2d)
+
+#     # -----------------------------
+#     # STEP 3: reshape for LSTM
+#     # -----------------------------
+#     seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
+    # input_data = input_data[features]
+    # input_data = input_data.apply(pd.to_numeric, errors='coerce')
+    # input_data = input_data.fillna(0)
+
+    # -----------------------------
+    # 🔥 SCALING (CRITICAL FIX)
+    # -----------------------------
+    # seq = input_data.values
+
+    # # reshape to 2D
+    # seq_2d = seq.reshape(-1, seq.shape[-1])
+
+    # # scale
+    # seq_2d = scaler.transform(seq_2d)
+
+    # # reshape back
+    # seq = seq_2d.reshape(seq.shape)
+    # STEP 1: take last 30 FIRST
+    # seq = input_data.values[-SEQ_LENGTH:]
+
+    # # STEP 2: reshape to 2D
+    # seq_2d = seq.reshape(-1, seq.shape[-1])
+
+    # # STEP 3: scale
+    # seq_2d = scaler.transform(seq_2d)
+
+    # # STEP 4: reshape back
+    # seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
+    # STEP 1: take last 30 FIRST
+    # 9
+
+    # STEP 2: pad BEFORE scaling (IMPORTANT)
+#     if len(seq) < SEQ_LENGTH:
+#         pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+#         seq = np.vstack([pad, seq])
+
+#     # STEP 3: reshape to 2D
+#     seq_2d = seq.reshape(-1, seq.shape[-1])
+
+#     # STEP 4: scale
+#     seq_2d = scaler.transform(seq_2d)
+
+#     # STEP 5: reshape to 3D for LSTM
+#     seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
+#     # -----------------------------
+#     # SEQUENCE
+#     # -----------------------------
+#     # seq = seq[-SEQ_LENGTH:]
+
+#     if len(seq) < SEQ_LENGTH:
+#         pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+#         seq = np.vstack([pad, seq])
+
+#     seq = seq.reshape(1, SEQ_LENGTH, len(features))
+
+#     # -----------------------------
+#     # PREDICT
+#     # -----------------------------
+#     try:
+#         pred = lstm_model.predict(seq)
+#         rul_pred = max(0, int(pred[0][0]))
+
+#         # OUTPUT
+#         col1, col2, col3 = st.columns(3)
+#         col1.metric("Remaining Useful Life", f"{rul_pred} cycles")
+#         col2.metric("Engine Stage", get_life_stage(rul_pred))
+#         col3.metric("Recommended Action", maintenance_action(rul_pred))
+
+#         # Alerts
+#         if rul_pred > 80:
+#             st.success("Engine is healthy.")
+#         elif rul_pred > 40:
+#             st.warning("Inspection recommended.")
+#         else:
+#             st.error("⚠️ Critical condition!")
+
+#         # Progress bar
+#         progress_value = max(0, min(rul_pred / 125, 1.0))
+#         st.subheader("Engine Health Level")
+#         st.progress(progress_value)
+
+#     except Exception as e:
+#         st.error(f"Prediction Error: {e}")
+
+# # -----------------------------
+# # INFO
+# # -----------------------------
+# st.info("Model: LSTM | Dataset: NASA C-MAPSS FD001")
 # import streamlit as st
 # import pandas as pd
 # import numpy as np
