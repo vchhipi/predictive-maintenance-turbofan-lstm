@@ -115,21 +115,31 @@ if st.button("🚀 Predict RUL"):
     # -----------------------------
     # 🔥 SCALING (CRITICAL FIX)
     # -----------------------------
-    seq = input_data.values
+    # seq = input_data.values
 
-    # reshape to 2D
+    # # reshape to 2D
+    # seq_2d = seq.reshape(-1, seq.shape[-1])
+
+    # # scale
+    # seq_2d = scaler.transform(seq_2d)
+
+    # # reshape back
+    # seq = seq_2d.reshape(seq.shape)
+    # STEP 1: take last 30 FIRST
+    seq = input_data.values[-SEQ_LENGTH:]
+
+    # STEP 2: reshape to 2D
     seq_2d = seq.reshape(-1, seq.shape[-1])
 
-    # scale
+    # STEP 3: scale
     seq_2d = scaler.transform(seq_2d)
 
-    # reshape back
-    seq = seq_2d.reshape(seq.shape)
-
+    # STEP 4: reshape back
+    seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
     # -----------------------------
     # SEQUENCE
     # -----------------------------
-    seq = seq[-SEQ_LENGTH:]
+    # seq = seq[-SEQ_LENGTH:]
 
     if len(seq) < SEQ_LENGTH:
         pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
