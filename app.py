@@ -86,18 +86,18 @@ if uploaded_file is not None:
     engine_data = df[df['engine_id'] == selected_engine]
 
     # Cycle selection
-    # cycle_value = st.sidebar.slider(
-    #     "Select Cycle",
-    #     int(engine_data["cycle"].min()),
-    #     int(engine_data["cycle"].max()),
-    #     int(engine_data["cycle"].max())
-    # )
+    cycle_value = st.sidebar.slider(
+        "Select Cycle",
+        int(engine_data["cycle"].min()),
+        int(engine_data["cycle"].max()),
+        int(engine_data["cycle"].max())
+    )
 
     # # Use data till selected cycle
-    # input_data = engine_data[engine_data["cycle"] <= cycle_value]
+    input_data = engine_data[engine_data["cycle"] <= cycle_value]
     # Always use full data (latest condition)
     # input_data = engine_data
-    input_data = engine_data.iloc[:50]   # or any mid point
+    # input_data = engine_data.iloc[:50]   # or any mid point
 
     # Optional: show current cycle
     st.write("Using latest cycle:", int(engine_data["cycle"].max()))
@@ -105,6 +105,7 @@ if uploaded_file is not None:
 else:
     st.warning("Upload CSV file")
 
+# -----------------------------
 # -----------------------------
 # PREDICTION
 # -----------------------------
@@ -114,44 +115,31 @@ if st.button("🚀 Predict RUL"):
         st.error("Upload CSV first")
         st.stop()
 
-    # Check columns
     missing_cols = [col for col in features if col not in input_data.columns]
     if missing_cols:
         st.error(f"Missing columns: {missing_cols}")
         st.stop()
 
-    # -----------------------------
-    # PREPARE INPUT
-    # -----------------------------
+    # Prepare data
     input_data = input_data[features]
     input_data = input_data.apply(pd.to_numeric, errors='coerce')
     input_data = input_data.fillna(0)
 
-    # -----------------------------
-    # CREATE SEQUENCE
-    # -----------------------------
+    # Sequence creation
     seq = input_data.values
 
     if len(seq) >= SEQ_LENGTH:
         seq = seq[-SEQ_LENGTH:]
     else:
         pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
-        seq = np.vstack([pad, seq])   # 2D safe
+        seq = np.vstack([pad, seq])
 
-    # -----------------------------
-    # SCALE (MATCH TRAINING)
-    # -----------------------------
+    # Scaling
     seq_2d = seq.reshape(-1, seq.shape[-1])
     seq_2d = scaler.transform(seq_2d)
-
-    # -----------------------------
-    # FINAL SHAPE
-    # -----------------------------
     seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
 
-    # -----------------------------
-    # PREDICT
-    # -----------------------------
+    # Prediction
     try:
         pred = lstm_model.predict(seq)
         rul_pred = max(0, int(pred[0][0]))
@@ -177,6 +165,78 @@ if st.button("🚀 Predict RUL"):
 
     except Exception as e:
         st.error(f"Prediction Error: {e}")
+# PREDICTION
+# -----------------------------
+# if st.button("🚀 Predict RUL"):
+
+#     if input_data is None:
+#         st.error("Upload CSV first")
+#         st.stop()
+
+#     # Check columns
+#     missing_cols = [col for col in features if col not in input_data.columns]
+#     if missing_cols:
+#         st.error(f"Missing columns: {missing_cols}")
+#         st.stop()
+
+#     # -----------------------------
+#     # PREPARE INPUT
+#     # -----------------------------
+#     input_data = input_data[features]
+#     input_data = input_data.apply(pd.to_numeric, errors='coerce')
+#     input_data = input_data.fillna(0)
+
+#     # -----------------------------
+#     # CREATE SEQUENCE
+#     # -----------------------------
+#     seq = input_data.values
+
+#     if len(seq) >= SEQ_LENGTH:
+#         seq = seq[-SEQ_LENGTH:]
+#     else:
+#         pad = np.zeros((SEQ_LENGTH - len(seq), len(features)))
+#         seq = np.vstack([pad, seq])   # 2D safe
+
+#     # -----------------------------
+#     # SCALE (MATCH TRAINING)
+#     # -----------------------------
+#     seq_2d = seq.reshape(-1, seq.shape[-1])
+#     seq_2d = scaler.transform(seq_2d)
+#     seq_2d = np.clip(seq_2d, 0, 1)
+#     # -----------------------------
+#     # FINAL SHAPE
+#     # -----------------------------
+#     seq = seq_2d.reshape(1, SEQ_LENGTH, len(features))
+
+#     # -----------------------------
+#     # PREDICT
+#     # -----------------------------
+#     st.write("Sample scaled input:", seq[0][-1])
+    # try:
+    #     pred = lstm_model.predict(seq)
+    #     rul_pred = max(0, int(pred[0][0]))
+
+    #     # OUTPUT
+    #     col1, col2, col3 = st.columns(3)
+    #     col1.metric("Remaining Useful Life", f"{rul_pred} cycles")
+    #     col2.metric("Engine Stage", get_life_stage(rul_pred))
+    #     col3.metric("Recommended Action", maintenance_action(rul_pred))
+
+    #     # Alerts
+    #     if rul_pred > 80:
+    #         st.success("Engine is healthy.")
+    #     elif rul_pred > 40:
+    #         st.warning("Inspection recommended.")
+    #     else:
+    #         st.error("⚠️ Critical condition!")
+
+    #     # Progress bar
+    #     progress_value = max(0, min(rul_pred / 125, 1.0))
+    #     st.subheader("Engine Health Level")
+    #     st.progress(progress_value)
+
+    # except Exception as e:
+    #     st.error(f"Prediction Error: {e}")
 
 # -----------------------------
 # INFO
