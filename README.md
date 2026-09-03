@@ -1,11 +1,11 @@
-# ✈️ Predictive Maintenance for Turbofan Engines using LSTM
+# Predictive Maintenance for Turbofan Engines using LSTM
 
 <!-- ## 📌 Overview
 This project focuses on predicting the **Remaining Useful Life (RUL)** of turbofan engines using **deep learning techniques**. Accurate RUL prediction enables proactive maintenance, reduces downtime, and improves operational safety in aerospace systems.
 
 The model is trained on the **NASA C-MAPSS dataset** and deployed through an **interactive Streamlit dashboard** for real-time predictions and decision support. -->
 
-## 📌 Overview
+## Overview
 This project aims to predict the **Remaining Useful Life (RUL)** of turbofan engines using deep learning techniques. The goal is to estimate how many cycles an engine can operate before failure, enabling timely maintenance decisions.
 
 The model is trained on the **NASA C-MAPSS dataset** and deployed through an interactive **Streamlit dashboard** for real-time prediction and monitoring.
@@ -68,7 +68,7 @@ The LSTM model performed best, mainly because it captures temporal dependencies 
 
 ---
 
-## 🖥️ Dashboard Features
+## Dashboard Features
 
 <!-- - Upload engine sensor data (CSV)
 - Predict Remaining Useful Life (RUL)
@@ -98,15 +98,15 @@ The Streamlit dashboard allows users to:
 
 ---
 
-## 📡 Deployment
+## Deployment
 
 The project is deployed using **Streamlit Community Cloud**, enabling access via a web interface.
 
-👉 *(Add your deployed link here)*
+👉 https://predictive-maintenance-turbofan-lstm.streamlit.app/
 
 ---
 
-## 🎯 Applications
+## Applications
 
 - Aerospace engine monitoring
 - Predictive maintenance systems
@@ -114,7 +114,7 @@ The project is deployed using **Streamlit Community Cloud**, enabling access via
 - Failure prediction in mechanical systems
 
 
-## ⭐ Acknowledgment
+## Acknowledgment
 This work was carried out as part of a B.Tech final year project in Mechanical Engineering, focusing on applying machine learning and deep learning techniques to real-world engineering problems.
 <!-- This project was developed as part of a B.Tech final year project in Mechanical Engineering, focusing on the intersection of **AI and predictive maintenance**. -->
 
